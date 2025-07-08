@@ -149,5 +149,4 @@ function syncCalendars() {
 
   Logger.log("Sync complete!");
   Logger.log("Summary: Created: " + createdCount + " events, Deleted Old Synced: " + deletedCount + " events.");
-  Logger.log("Note: 'Updated' count is not applicable with this clear & re-create strategy.");
 }
