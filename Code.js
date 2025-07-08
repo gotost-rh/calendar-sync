@@ -89,16 +89,6 @@ function syncCalendars() {
     }
     const overallStatus = String(eventOverallStatusRaw || '').trim().toLowerCase();
 
-
-    // --- CRUCIAL: Removed unreliable getGuests() loop and heuristic ---
-    // The previous logs indicated event.getGuests() returns malformed guest objects
-    // for your environment (plain email strings instead of CalendarEventGuest objects).
-    // This makes reliably detecting owner's "declined" status via guest.getGuestStatus() impossible.
-    //
-    // Therefore, owner events that are "declined" (by clicking 'No' in the UI)
-    // but not 'canceled' will now be synced.
-    // --- END REMOVAL ---
-
     Logger.log("  Source Event Found: Title: '" + title + "', ID: '" + eventId + "', AllDay: " + event.isAllDayEvent() + ", Start: " + event.getStartTime() + ", MyStatus (Normalized): " + myStatus + ", Overall Status (Normalized): " + overallStatus);
 
     let shouldExclude = false;
