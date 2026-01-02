@@ -1,7 +1,8 @@
 // === CONFIGURATION ===
+// Personal calendar IDs are loaded from Config.js (see Config.example.js)
 const CONFIG = {
-  SOURCE_CALENDAR_ID: "shgoto@redhat.com",
-  DESTINATION_CALENDAR_ID: "bc739c9a917559627e4badf6894211393916409fa7c2b0a046da73effc3549f5@group.calendar.google.com",
+  SOURCE_CALENDAR_ID: USER_CONFIG.SOURCE_CALENDAR_ID,
+  DESTINATION_CALENDAR_ID: USER_CONFIG.DESTINATION_CALENDAR_ID,
   SYNC_DAYS_PAST: 0,
   SYNC_DAYS_FUTURE: 90,
   EXCLUDE_KEYWORDS: [
