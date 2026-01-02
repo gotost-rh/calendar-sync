@@ -2,7 +2,6 @@
 const CONFIG = {
   SOURCE_CALENDAR_ID: "shgoto@redhat.com",
   DESTINATION_CALENDAR_ID: "bc739c9a917559627e4badf6894211393916409fa7c2b0a046da73effc3549f5@group.calendar.google.com",
-  SCRIPT_SUFFIX: "[Synced]",
   SYNC_DAYS_PAST: 0,
   SYNC_DAYS_FUTURE: 90,
   EXCLUDE_KEYWORDS: [
@@ -135,24 +134,34 @@ function shouldExcludeEvent(event) {
  * @returns {number} Number of events deleted
  */
 function cleanupExistingSyncedEvents(destinationCalendar, startTime, endTime) {
-  Logger.log("Step 1: Deleting all previously synced events from destination calendar within the range...");
+  Logger.log("Step 1: Deleting all events from destination calendar within the range...");
   
   const existingDestinationEvents = destinationCalendar.getEvents(startTime, endTime);
   let deletedCount = 0;
 
   for (const event of existingDestinationEvents) {
-    if (event.getTitle().includes(CONFIG.SCRIPT_SUFFIX)) {
-      try {
-        event.deleteEvent();
-        deletedCount++;
-      } catch (e) {
-        Logger.log(`  ERROR deleting old synced event '${event.getTitle()}': ${e.toString()}`);
-      }
+    try {
+      event.deleteEvent();
+      deletedCount++;
+    } catch (e) {
+      Logger.log(`  ERROR deleting event '${event.getTitle()}': ${e.toString()}`);
     }
   }
   
-  Logger.log(`Deleted ${deletedCount} previously synced events from destination calendar`);
+  Logger.log(`Deleted ${deletedCount} events from destination calendar`);
   return deletedCount;
+}
+
+/**
+ * Generate a unique key for an event to detect duplicates
+ * @param {CalendarEvent} event - The calendar event
+ * @returns {string} A unique key based on title and start time
+ */
+function getEventUniqueKey(event) {
+  const title = event.getTitle();
+  const startTime = event.getStartTime().getTime();
+  const endTime = event.getEndTime().getTime();
+  return `${title}|${startTime}|${endTime}`;
 }
 
 /**
@@ -163,7 +172,7 @@ function cleanupExistingSyncedEvents(destinationCalendar, startTime, endTime) {
  */
 function createDestinationEvent(destinationCalendar, sourceEvent) {
   try {
-    const newTitle = sourceEvent.getTitle() + " " + CONFIG.SCRIPT_SUFFIX;
+    const newTitle = sourceEvent.getTitle();
     const newDescription = sourceEvent.getDescription();
     const newStartTime = sourceEvent.getStartTime();
     const newEndTime = sourceEvent.getEndTime();
@@ -174,7 +183,20 @@ function createDestinationEvent(destinationCalendar, sourceEvent) {
     };
 
     if (newIsAllDay) {
-      destinationCalendar.createAllDayEvent(newTitle, newStartTime, newEndTime, options);
+      // Calculate the number of days the event spans
+      const startDate = new Date(newStartTime);
+      const endDate = new Date(newEndTime);
+      const diffDays = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24));
+      
+      if (diffDays <= 1) {
+        // Single-day all-day event - only pass start date to avoid duplication
+        destinationCalendar.createAllDayEvent(newTitle, startDate, options);
+      } else {
+        // Multi-day all-day event - adjust end date (endDate is midnight of day after last day)
+        const adjustedEndDate = new Date(endDate);
+        adjustedEndDate.setDate(adjustedEndDate.getDate() - 1);
+        destinationCalendar.createAllDayEvent(newTitle, startDate, adjustedEndDate, options);
+      }
     } else {
       destinationCalendar.createEvent(newTitle, newStartTime, newEndTime, options);
     }
@@ -201,6 +223,8 @@ function processAndSyncEvents(sourceCalendar, destinationCalendar, startTime, en
   Logger.log("Step 3: Creating/Re-creating events in destination calendar...");
 
   let createdCount = 0;
+  let skippedDuplicates = 0;
+  const processedEventKeys = new Set();
 
   for (const event of sourceEvents) {
     const title = event.getTitle();
@@ -216,11 +240,24 @@ function processAndSyncEvents(sourceCalendar, destinationCalendar, startTime, en
 
     Logger.log(`  Source Event Found: Title: '${title}', ID: '${eventId}', AllDay: ${event.isAllDayEvent()}, Start: ${event.getStartTime()}, MyStatus (Normalized): ${myStatus}, Overall Status (Normalized): ${overallStatus}`);
 
+    // Check for duplicate events (recurring events can return multiple instances with same time/title)
+    const eventKey = getEventUniqueKey(event);
+    if (processedEventKeys.has(eventKey)) {
+      Logger.log(`    -> SKIPPED: Duplicate event (same title and time already processed)`);
+      skippedDuplicates++;
+      continue;
+    }
+
     if (!shouldExcludeEvent(event)) {
       if (createDestinationEvent(destinationCalendar, event)) {
+        processedEventKeys.add(eventKey);
         createdCount++;
       }
     }
+  }
+
+  if (skippedDuplicates > 0) {
+    Logger.log(`Skipped ${skippedDuplicates} duplicate events`);
   }
 
   return createdCount;
