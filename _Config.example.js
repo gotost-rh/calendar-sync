@@ -1,6 +1,6 @@
 // === PERSONAL CONFIGURATION ===
-// Copy this file to Config.js and fill in your values.
-// Config.js should NOT be committed to git.
+// Copy this file to _Config.js and fill in your values.
+// _Config.js should NOT be committed to git.
 
 const USER_CONFIG = {
   // SOURCE_CALENDAR_ID: The calendar you want to sync FROM

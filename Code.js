@@ -1,5 +1,5 @@
 // === CONFIGURATION ===
-// Personal calendar IDs are loaded from Config.js (see Config.example.js)
+// Personal calendar IDs are loaded from _Config.js (see _Config.example.js)
 const CONFIG = {
   SOURCE_CALENDAR_ID: USER_CONFIG.SOURCE_CALENDAR_ID,
   DESTINATION_CALENDAR_ID: USER_CONFIG.DESTINATION_CALENDAR_ID,
